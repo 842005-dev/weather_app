@@ -1,42 +1,54 @@
-async function getWeather() {
-  const city = document.getElementById("cityInput").value;
-  if (!city) {
-    alert("Please enter a city name!");
+const input = document.getElementById('cityInput');
+const suggestions = document.getElementById('suggestions');
+const btn = document.getElementById('getWeatherBtn');
+const result = document.getElementById('result');
+
+input.addEventListener('input', async () => {
+  const query = input.value.trim();
+  if (query.length < 2) {
+    suggestions.innerHTML = '';
     return;
   }
 
-  const res = await fetch(`/weather?city=${city}`);
+  const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${query}&count=5`);
+  const data = await res.json();
+  suggestions.innerHTML = '';
+
+  if (data.results) {
+    data.results.forEach(place => {
+      const item = document.createElement('button');
+      item.textContent = `${place.name}, ${place.country}`;
+      item.className = 'list-group-item list-group-item-action';
+      item.onclick = () => {
+        input.value = `${place.name}`;
+        suggestions.innerHTML = '';
+      };
+      suggestions.appendChild(item);
+    });
+  }
+});
+
+btn.addEventListener('click', async () => {
+  const city = input.value.trim();
+  if (!city) return;
+
+  const res = await fetch(`/weather?city=${encodeURIComponent(city)}`);
   const data = await res.json();
 
   if (data.error) {
-    document.getElementById("weatherResult").innerHTML = `<p class="text-red-200">${data.error}</p>`;
+    result.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
   } else {
-    document.getElementById("weatherResult").innerHTML = `
-      <p><strong>City:</strong> ${data.city}</p>
-      <p><strong>Temperature:</strong> ${data.temperature} °C</p>
-      <p><strong>Windspeed:</strong> ${data.windspeed} km/h</p>
+    const temp = data.current.temperature || 'N/A';
+    const wind = data.current.windspeed || 'N/A';
+
+    result.innerHTML = `
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">${data.city}</h5>
+          <p>Temperature: ${temp} °C</p>
+          <p>Wind Speed: ${wind} km/h</p>
+        </div>
+      </div>
     `;
   }
-}
-
-async function suggestCities() {
-  const input = document.getElementById("cityInput");
-  const query = input.value;
-  if (query.length < 2) return;
-
-  const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${query}`);
-  const data = await res.json();
-
-  const datalist = document.getElementById("suggestions");
-  datalist.innerHTML = "";
-
-  if (data.results) {
-    data.results.forEach(city => {
-      const option = document.createElement("option");
-      option.value = city.name;
-      datalist.appendChild(option);
-    });
-  }
-}
-
-document.getElementById("cityInput").addEventListener("input", suggestCities);
+});

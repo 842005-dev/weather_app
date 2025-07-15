@@ -1,45 +1,42 @@
-document.getElementById('getWeather').addEventListener('click', () => {
-  const city = document.getElementById('city').value.trim();
+async function getWeather() {
+  const city = document.getElementById("cityInput").value;
   if (!city) {
-    alert('Please enter a city!');
+    alert("Please enter a city name!");
     return;
   }
 
-  fetch(`/weather?city=${city}`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.error) {
-        alert(data.error);
-        return;
-      }
+  const res = await fetch(`/weather?city=${city}`);
+  const data = await res.json();
 
-      document.getElementById('weatherCity').innerText = data.city;
-      document.getElementById('weatherDesc').innerText = data.description;
-      document.getElementById('weatherTemp').innerText = `Temp: ${data.temperature}°C`;
-      document.getElementById('weatherMaxMin').innerText = `Max: ${data.temp_max}°C | Min: ${data.temp_min}°C`;
-      document.getElementById('weatherWind').innerText = `Windspeed: ${data.windspeed} km/h`;
+  if (data.error) {
+    document.getElementById("weatherResult").innerHTML = `<p class="text-red-200">${data.error}</p>`;
+  } else {
+    document.getElementById("weatherResult").innerHTML = `
+      <p><strong>City:</strong> ${data.city}</p>
+      <p><strong>Temperature:</strong> ${data.temperature} °C</p>
+      <p><strong>Windspeed:</strong> ${data.windspeed} km/h</p>
+    `;
+  }
+}
 
-      document.getElementById('result').classList.remove('d-none');
+async function suggestCities() {
+  const input = document.getElementById("cityInput");
+  const query = input.value;
+  if (query.length < 2) return;
 
-      const bg = document.querySelector('.bg-overlay');
-      if (data.condition === 'clear') {
-        bg.style.background = 'linear-gradient(135deg, #fceabb, #f8b500)';
-      } else if (data.condition === 'cloudy') {
-        bg.style.background = 'linear-gradient(135deg, #bdc3c7, #2c3e50)';
-      } else if (data.condition === 'rain') {
-        bg.style.background = 'linear-gradient(135deg, #4e54c8, #8f94fb)';
-      } else if (data.condition === 'snow') {
-        bg.style.background = 'linear-gradient(135deg, #e0eafc, #cfdef3)';
-      } else if (data.condition === 'thunder') {
-        bg.style.background = 'linear-gradient(135deg, #0f2027, #203a43, #2c5364)';
-      } else if (data.condition === 'fog') {
-        bg.style.background = 'linear-gradient(135deg, #757f9a, #d7dde8)';
-      } else {
-        bg.style.background = 'linear-gradient(135deg, #83a4d4, #b6fbff)';
-      }
-    })
-    .catch(err => {
-      console.error(err);
-      alert('Error fetching weather.');
+  const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${query}`);
+  const data = await res.json();
+
+  const datalist = document.getElementById("suggestions");
+  datalist.innerHTML = "";
+
+  if (data.results) {
+    data.results.forEach(city => {
+      const option = document.createElement("option");
+      option.value = city.name;
+      datalist.appendChild(option);
     });
-});
+  }
+}
+
+document.getElementById("cityInput").addEventListener("input", suggestCities);
